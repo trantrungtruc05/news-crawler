@@ -179,7 +179,7 @@ def main() -> None:
 
     scheduler = BlockingScheduler()
     scheduler.add_job(run_rss_check, "interval", minutes=rss_interval)
-    scheduler.add_job(run_full_crawl, "interval", hours=full_interval)
+    # scheduler.add_job(run_full_crawl, "interval", hours=full_interval)
 
     try:
         scheduler.start()
