@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session
 
 from news_crawler.core.exceptions import DatabaseError
@@ -84,3 +85,83 @@ def upsert_article(session: Session, data: TranslatedArticle) -> bool:
     except Exception as exc:
         logger.exception("Upsert failed for %s", data.url)
         raise DatabaseError(f"Upsert failed for {data.url}: {exc}") from exc
+
+
+# ---------------------------------------------------------------------------
+# Read queries (used by the API layer)
+# ---------------------------------------------------------------------------
+
+
+def get_articles_grouped_by_category(
+    session: Session,
+    per_category: int = 3,
+) -> dict[str, list[Article]]:
+    """Return the latest *per_category* articles for every category.
+
+    Uses a window function (ROW_NUMBER) so the DB does the heavy lifting in a
+    single round-trip.
+    """
+    row_num = (
+        sa_func.row_number()
+        .over(
+            partition_by=Article.category,
+            order_by=Article.published_at.desc().nulls_last(),
+        )
+        .label("rn")
+    )
+
+    subq = (
+        session.query(Article, row_num)
+        .subquery()
+    )
+
+    rows = (
+        session.query(Article)
+        .join(subq, Article.url == subq.c.url)
+        .filter(subq.c.rn <= per_category)
+        .order_by(Article.category, Article.published_at.desc().nulls_last())
+        .all()
+    )
+
+    grouped: dict[str, list[Article]] = {}
+    for article in rows:
+        grouped.setdefault(article.category, []).append(article)
+    return grouped
+
+
+def get_articles_by_category(
+    session: Session,
+    category: str,
+    page: int = 1,
+    page_size: int = 20,
+) -> tuple[list[Article], int]:
+    """Return all articles for a given category with pagination.
+
+    Returns:
+        A tuple of (articles, total_count).
+    """
+    query = (
+        session.query(Article)
+        .filter(Article.category == category)
+        .order_by(Article.published_at.desc().nulls_last())
+    )
+
+    total = query.count()
+    articles = query.offset((page - 1) * page_size).limit(page_size).all()
+    return articles, total
+
+
+def get_all_categories(session: Session) -> list[dict[str, object]]:
+    """Return all distinct categories with their article counts."""
+    rows = (
+        session.query(Article.category, sa_func.count(Article.url).label("count"))
+        .group_by(Article.category)
+        .order_by(Article.category)
+        .all()
+    )
+    return [{"name": name, "article_count": count} for name, count in rows]
+
+
+def get_article_by_url(session: Session, url: str) -> Article | None:
+    """Fetch a single article by its URL (primary key)."""
+    return session.get(Article, url)

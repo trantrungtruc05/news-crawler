@@ -13,6 +13,8 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
     "apscheduler>=3.10",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +27,7 @@ dev = [
 
 [project.scripts]
 news-crawler = "news_crawler.main:main"
+news-api = "news_crawler.run_api:main"
 
 [tool.black]
 line-length = 88

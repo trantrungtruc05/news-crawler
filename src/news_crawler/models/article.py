@@ -75,3 +75,83 @@ class TranslatedArticle(BaseModel):
     content_vi: str
     image_url: str | None = None
     tags: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# API response schemas
+# ---------------------------------------------------------------------------
+
+
+class ArticleSummaryResponse(BaseModel):
+    """Lightweight article representation for listing endpoints."""
+
+    model_config = {"from_attributes": True}
+
+    url: str
+    category: str
+    title_original: str
+    title_vi: str | None = None
+    author: str | None = None
+    published_at: datetime | None = None
+    summary_vi: str | None = None
+    summary_original: str | None = None
+    image_url: str | None = None
+    tags: str | None = None
+
+
+class CategoryGroup(BaseModel):
+    """A single category with its latest articles."""
+
+    category: str
+    articles: list[ArticleSummaryResponse]
+
+
+class ArticleListResponse(BaseModel):
+    """Top-level response for the grouped article listing."""
+
+    categories: list[CategoryGroup]
+
+
+class CategoryArticlesResponse(BaseModel):
+    """Paginated list of articles for a single category."""
+
+    category: str
+    articles: list[ArticleSummaryResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class CategoryItemResponse(BaseModel):
+    """A single category with its article count."""
+
+    name: str
+    article_count: int
+
+
+class CategoryListResponse(BaseModel):
+    """Response for the categories listing endpoint."""
+
+    categories: list[CategoryItemResponse]
+    total: int
+
+
+class ArticleDetailResponse(BaseModel):
+    """Full article detail including content."""
+
+    model_config = {"from_attributes": True}
+
+    url: str
+    category: str
+    title_original: str
+    title_vi: str | None = None
+    author: str | None = None
+    published_at: datetime | None = None
+    summary_original: str | None = None
+    summary_vi: str | None = None
+    content_original: str
+    content_vi: str | None = None
+    image_url: str | None = None
+    tags: str | None = None
+    crawled_at: datetime
+    updated_at: datetime

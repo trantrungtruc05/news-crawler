@@ -1,2 +1,0 @@
-[console_scripts]
-news-crawler = news_crawler.main:main
